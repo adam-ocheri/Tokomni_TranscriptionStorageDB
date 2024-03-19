@@ -1,21 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <form>
-        <input type="text" name="query">
+{% extends "../base.html" %} {% block title %} Home Page {% endblock %}
+{% block content %}
+<h2>Conversation Items</h2>
+    <form style="margin: 3%;">
+        <input type="text" name="search_query">
         <button>Search</button>
-        <ul>
+        <ul style="margin: 10%;">
             {% for item in items %}
             <li>
-                {{item.speaker}}: {{item.text}}
+                <strong>{{item.speaker}}</strong>: {{item.text}}
             </li>
             {% endfor %}
         </ul>
     </form>
-</body>
-</html>
+{% endblock %}

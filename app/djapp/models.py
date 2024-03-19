@@ -24,6 +24,7 @@ class ConversationItem(models.Model):
     text = models.TextField()
     speaker = models.CharField(max_length=20)
     search_vector = SearchVectorField(null=True, blank=True)
+    timestamp = models.FloatField(default=0.0)
     call_part = models.ForeignKey(CallPart, on_delete=models.CASCADE, related_name='conversation_items')
 
     class Meta:
