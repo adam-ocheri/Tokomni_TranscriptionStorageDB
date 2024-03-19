@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.db.models import Q
 from .models import CallPart, ConversationItem
 
 def home(request):
@@ -13,7 +14,7 @@ def main(request):
     query = request.GET.get('query')
 
     if query:
-        conversation = ConversationItem.objects.filter(speaker__search=query)
+        conversation = ConversationItem.objects.filter(Q(speaker__search=query) | Q(text__search=query))
     else:
         conversation = ConversationItem.objects.all()        
 
