@@ -1,0 +1,11 @@
+{% extends "base.html" %} {% block title %} My Actions {% endblock %}
+{% block content %}
+<h1>DB Data</h1>
+<ul>
+    {% for item in items %}
+    <li>
+        {{item.data}}: {%if item.valid%}Valid Item{% else %}Item Invalid{% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endblock %}
