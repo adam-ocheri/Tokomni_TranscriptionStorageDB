@@ -5,7 +5,7 @@ from .models import ConversationItem
 
 @receiver(post_save, sender=ConversationItem)
 def update_search_vector(sender, instance : ConversationItem, **kwargs):
-    print("SearchVector CALLBACK!: update_search_vector()...\n")
+    print("SearchVector POST-SAVE CALLBACK!:\n   update_search_vector(sender, instance : ConversationItem, **kwargs)...\n")
     
     update_fields = kwargs.get('update_fields')
     if update_fields is None or 'search_vector' not in update_fields:
