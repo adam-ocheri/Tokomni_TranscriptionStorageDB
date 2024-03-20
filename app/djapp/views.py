@@ -84,11 +84,23 @@ class CallPartView(APIView):
     def get(self, request):
         pk = request.query_params.get('pk')
         parent_fk = request.query_params.get('parent_fk')
+        callpart_id = request.query_params.get('callpart_id')
+        ext = request.query_params.get('extension')
+        ext_id = request.query_params.get('extension_uuid')
         if pk:
             item = CallPart.objects.get(pk=pk)
-            serializer = CallPartSerializer(item) 
+            serializer = CallPartSerializer(item)
         elif parent_fk:
             item = CallPart.objects.filter(fullcall_id=parent_fk)
+            serializer = CallPartSerializer(item, many=True)
+        elif callpart_id:
+            item = CallPart.objects.get(callpart_uuid=callpart_id)
+            serializer = CallPartSerializer(item)
+        elif ext:
+            item = CallPart.objects.filter(extension=ext)
+            serializer = CallPartSerializer(item, many=True)
+        elif ext_id:
+            item = CallPart.objects.filter(extension_uuid=ext_id)
             serializer = CallPartSerializer(item, many=True)
         else:
             item = CallPart.objects  
@@ -128,15 +140,19 @@ class CallPartView(APIView):
 class FullCallDataView(APIView):
     def get(self, request):
         pk = request.query_params.get('pk')
-        parent_fk = request.query_params.get('parent_fk')
+        cdr = request.query_params.get('cdr_id')
+        calllog = request.query_params.get('calllog_id')
         if pk:
             item = FullCallData.objects.get(pk=pk)
             serializer = FullCallDataSerializer(item) 
-        elif parent_fk:
-            item = FullCallData.objects.filter(cdr_uuid=parent_fk)
-            serializer = FullCallDataSerializer(item, many=False)
+        elif cdr:
+            item = FullCallData.objects.get(cdr_uuid=cdr)
+            serializer = FullCallDataSerializer(item)
+        elif calllog:
+            item = FullCallData.objects.get(calllog_uuid=calllog)
+            serializer = FullCallDataSerializer(item)
         else:
-            item = FullCallData.objects  
+            item = FullCallData.objects.all() 
             serializer = FullCallDataSerializer(item, many=True)  
         return Response(serializer.data)
 

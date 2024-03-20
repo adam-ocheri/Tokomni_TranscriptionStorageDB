@@ -4,7 +4,7 @@ from .models import ConversationItem, CallPart, FullCallData
 class ConversationItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConversationItem
-        fields = ['text', 'speaker', 'search_vector', 'timestamp', 'call_part']
+        fields = "__all__"
         extra_kwargs = {
             'speaker': {'required': False},
             'callpart_id': {'required': False},
@@ -14,9 +14,9 @@ class ConversationItemSerializer(serializers.ModelSerializer):
 class CallPartSerializer(serializers.ModelSerializer):
     class Meta:
         model = CallPart
-        fields = ['fullcall_id', 'file_location', 'extension']
+        fields = "__all__"
 
 class FullCallDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = FullCallData
-        fields = ['cdr_uuid']
+        fields = "__all__"

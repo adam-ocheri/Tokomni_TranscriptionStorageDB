@@ -4,23 +4,23 @@ from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVectorField
 
 # Create your models here.
-class DBItem(models.Model):
-    pass
 
 class FullCallData(models.Model):
-    cdr_uuid = models.CharField(max_length=200, editable=False)
-    
+    cdr_uuid = models.CharField(max_length=200) # editable=False
+    calllog_uuid = models.CharField(max_length=200, default="") # editable=False
+    domain = models.TextField(default="")
+    epoch = models.BigIntegerField(default=0)
+
 
 class CallPart(models.Model):
-    # id = models.UUIDField(default=uuid.uuid4, editable=False)
-    # cdr_uuid = models.ForeignKey(FullCallData, on_delete=models.CASCADE)
     fullcall_id = models.ForeignKey(FullCallData, on_delete=models.CASCADE)
+    callpart_uuid = models.CharField(max_length=200, default="") # editable=False
     file_location = models.TextField()
     extension = models.IntegerField(default=0)
+    extension_uuid = models.CharField(max_length=200, default="") # editable=False
 
 
 class ConversationItem(models.Model):
-    # id = models.UUIDField(default=uuid.uuid4, editable=False)
     text = models.TextField()
     speaker = models.CharField(max_length=20)
     search_vector = SearchVectorField(null=True, blank=True)
