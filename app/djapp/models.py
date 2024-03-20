@@ -8,15 +8,15 @@ class DBItem(models.Model):
     pass
 
 class FullCallData(models.Model):
-    cdr_uuid = models.UUIDField(default=uuid.uuid4, editable=False)
-    callog_uuid = models.UUIDField(default=uuid.uuid4, editable=True)
-    extension = models.IntegerField()
+    cdr_uuid = models.CharField(max_length=200, editable=False)
+    
 
 class CallPart(models.Model):
     # id = models.UUIDField(default=uuid.uuid4, editable=False)
     # cdr_uuid = models.ForeignKey(FullCallData, on_delete=models.CASCADE)
-    callog_uuid = models.ForeignKey(FullCallData, on_delete=models.CASCADE)
+    fullcall_id = models.ForeignKey(FullCallData, on_delete=models.CASCADE)
     file_location = models.TextField()
+    extension = models.IntegerField(default=0)
 
 
 class ConversationItem(models.Model):
@@ -25,7 +25,7 @@ class ConversationItem(models.Model):
     speaker = models.CharField(max_length=20)
     search_vector = SearchVectorField(null=True, blank=True)
     timestamp = models.FloatField(default=0.0)
-    call_part = models.ForeignKey(CallPart, on_delete=models.CASCADE, related_name='conversation_items')
+    callpart_id = models.ForeignKey(CallPart, on_delete=models.CASCADE, related_name='conversation_items')
 
     class Meta:
         indexes = [

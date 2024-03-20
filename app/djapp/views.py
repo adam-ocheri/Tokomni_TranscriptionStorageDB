@@ -1,11 +1,11 @@
 from django.shortcuts import render
 from django.db import connection
 from django.db.models import Q
-from .models import CallPart, ConversationItem
+from .models import CallPart, ConversationItem, FullCallData
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .serializers import ConversationItemSerializer, CallPartSerializer
+from .serializers import ConversationItemSerializer, CallPartSerializer, FullCallDataSerializer
 
 def home(request):
     return render(request, "home.html")
@@ -41,26 +41,12 @@ class ConversationItemView(APIView):
             item = ConversationItem.objects.get(pk=pk)
             serializer = ConversationItemSerializer(item) 
         elif parent_fk:
-            item = ConversationItem.objects.filter(call_part=parent_fk)
+            item = ConversationItem.objects.filter(callpart_id=parent_fk)
             serializer = ConversationItemSerializer(item, many=True)
         else:
             item = ConversationItem.objects  
             serializer = ConversationItemSerializer(item, many=True)  
         return Response(serializer.data)
-        # items = ConversationItem.objects.all().first()
-        # serializer = ConversationItemSerializer(data=items)
-        # try:
-        #     if serializer.is_valid(raise_exception=True):
-        #         print("I AM HERE!")
-        #         data = serializer.data
-        #         return Response(data)
-        # except Exception as e:
-        #     print(e)
-        # if serializer.is_valid():
-        #     return Response(serializer.errors, status=400)
-        # else:
-        #     return Response("Error with serialization of DB object at ConversationItemView::get", status=400)
-
 
     def post(self, request):
         serializer = ConversationItemSerializer(data=request.data)
@@ -80,7 +66,7 @@ class ConversationItemView(APIView):
             validated_data = serializer.validated_data
             # Exclude 'speaker' and 'call_part' from being updated
             validated_data.pop('speaker', None)
-            validated_data.pop('call_part', None)
+            validated_data.pop('callpart_id', None)
             serializer.save(**validated_data)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -96,8 +82,17 @@ class ConversationItemView(APIView):
 
 class CallPartView(APIView):
     def get(self, request):
-        items = CallPart.objects.all()
-        serializer = CallPartSerializer(items, many=True)
+        pk = request.query_params.get('pk')
+        parent_fk = request.query_params.get('parent_fk')
+        if pk:
+            item = CallPart.objects.get(pk=pk)
+            serializer = CallPartSerializer(item) 
+        elif parent_fk:
+            item = CallPart.objects.filter(fullcall_id=parent_fk)
+            serializer = CallPartSerializer(item, many=True)
+        else:
+            item = CallPart.objects  
+            serializer = CallPartSerializer(item, many=True)  
         return Response(serializer.data)
 
     def post(self, request):
@@ -115,7 +110,9 @@ class CallPartView(APIView):
 
         serializer = CallPartSerializer(item, data=request.data)
         if serializer.is_valid():
-            serializer.save()
+            validated_data = serializer.validated_data
+            validated_data.pop('fullcall_id', None)
+            serializer.save(**validated_data)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -123,6 +120,49 @@ class CallPartView(APIView):
         try:
             item = CallPart.objects.get(pk=pk)
         except CallPart.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class FullCallDataView(APIView):
+    def get(self, request):
+        pk = request.query_params.get('pk')
+        parent_fk = request.query_params.get('parent_fk')
+        if pk:
+            item = FullCallData.objects.get(pk=pk)
+            serializer = FullCallDataSerializer(item) 
+        elif parent_fk:
+            item = FullCallData.objects.filter(cdr_uuid=parent_fk)
+            serializer = FullCallDataSerializer(item, many=False)
+        else:
+            item = FullCallData.objects  
+            serializer = FullCallDataSerializer(item, many=True)  
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = FullCallDataSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+    
+    def put(self, request, pk, format=None):
+        try:
+            item = FullCallData.objects.get(pk=pk)
+        except FullCallData.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = FullCallDataSerializer(item, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk, format=None):
+        try:
+            item = FullCallData.objects.get(pk=pk)
+        except FullCallData.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         item.delete()
