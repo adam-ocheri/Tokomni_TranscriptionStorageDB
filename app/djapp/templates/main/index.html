@@ -1,15 +1,39 @@
-{% extends "../base.html" %} {% block title %} Home Page {% endblock %}
+
+{% extends "../base.html" %}
+{% block title %} Home Page {% endblock %}
 {% block content %}
 <h2>Conversation Items</h2>
-    <form style="margin: 3%;">
-        <input type="text" name="search_query">
-        <button>Search</button>
-        <ul style="margin: 10%;">
-            {% for item in items %}
-            <li>
-                <strong>{{item.speaker}}</strong>: {{item.text}}
-            </li>
-            {% endfor %}
-        </ul>
-    </form>
+<form id="myForm" style="margin: 3%;">
+    <input type="text" name="search_query">
+    <button type="submit">Search</button>
+    <select name="selected_call_id">
+        <option value="">Select a FullCallData</option>
+        {% for call in calls %}
+        <option value="{{ call.id }}">{{ call.cdr_uuid }}</option>
+        {% endfor %}
+    </select>
+    <select name="selected_callpart_id">
+        <option value="">Select a CallPart</option>
+        {% for callpart in callparts %}
+        <option value="{{ callpart.id }}">{{ callpart.id }}</option>
+        {% endfor %}
+    </select>
+    <ul style="margin: 10%;">
+        <h4>Found Conversation Items</h4>
+        {% for item in items %}
+        <li>
+            <strong>{{ item.speaker }}</strong>: {{ item.text }}
+        </li>
+        {% endfor %}
+    </ul>
+</form>
 {% endblock %}
+
+<script>
+    document.getElementById('myForm').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent the form from submitting normally
+    
+        // Your custom form handling logic here
+        // For example, you could send an AJAX request to submit the form data
+    });
+</script>

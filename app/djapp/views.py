@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import ConversationItemSerializer, CallPartSerializer, FullCallDataSerializer
+from .views_utils import util_get_conversation_item_view, util_get_call_part_view, util_get_full_calldata__view
 
 def home(request):
     return render(request, "home.html")
@@ -16,36 +17,47 @@ def items(request):
 
 def search(request):
     query = request.GET.get('search_query')
+    # parent_fk = request.GET.get('parent_fk')
+    selected_call_id = request.GET.get('selected_call_id')
+    selected_callpart_id = request.GET.get('selected_callpart_id')
+    # selected_callpart_id
+    calls = FullCallData.objects.all()
+    callparts = CallPart.objects.none()
+    conversation_items = ConversationItem.objects.none()
+
+    if selected_call_id:
+        # Filter CallParts based on the selected FullCallData
+        callparts = CallPart.objects.filter(fullcall_id=selected_call_id)
+        # For each CallPart, fetch its related ConversationItems
+        conversation_items = ConversationItem.objects.filter(callpart_id__in=selected_callpart_id)
+        
 
     if query:
-        conversation = ConversationItem.objects.filter(Q(speaker__search=query) | Q(text__search=query))
+        conversation = conversation_items.filter(Q(speaker__search=query) | Q(text__search=query))
     else:
-        conversation = ConversationItem.objects.all()        
+        conversation = conversation_items        
 
-    list(conversation) # This is to trigger the query to be printed later due to Django ORM lazy loading
+    context = {
+        'items': conversation,
+        'calls': calls,
+        'callparts': callparts,
+        'conversation_items': conversation_items,
+    }
+
+    list(conversation) # This is to trigger the query to be printed earlier due to Django ORM lazy loading
 
     print("Looking at QUERIES:")
     for query in connection.queries:
         print("--------------------")
         print(query)
         print("--------------------")
-    context = {'items': conversation}
+    # context = {'items': conversation, 'calls': calls, 'callparts': callparts}
     return render(request, 'main/index.html', context)
 
 # Create your views here.
 class ConversationItemView(APIView):
     def get(self, request):
-        pk = request.query_params.get('pk')
-        parent_fk = request.query_params.get('parent_fk')
-        if pk:
-            item = ConversationItem.objects.get(pk=pk)
-            serializer = ConversationItemSerializer(item) 
-        elif parent_fk:
-            item = ConversationItem.objects.filter(callpart_id=parent_fk)
-            serializer = ConversationItemSerializer(item, many=True)
-        else:
-            item = ConversationItem.objects  
-            serializer = ConversationItemSerializer(item, many=True)  
+        serializer = util_get_conversation_item_view(request)
         return Response(serializer.data)
 
     def post(self, request):
@@ -82,29 +94,7 @@ class ConversationItemView(APIView):
 
 class CallPartView(APIView):
     def get(self, request):
-        pk = request.query_params.get('pk')
-        parent_fk = request.query_params.get('parent_fk')
-        callpart_id = request.query_params.get('callpart_id')
-        ext = request.query_params.get('extension')
-        ext_id = request.query_params.get('extension_uuid')
-        if pk:
-            item = CallPart.objects.get(pk=pk)
-            serializer = CallPartSerializer(item)
-        elif parent_fk:
-            item = CallPart.objects.filter(fullcall_id=parent_fk)
-            serializer = CallPartSerializer(item, many=True)
-        elif callpart_id:
-            item = CallPart.objects.get(callpart_uuid=callpart_id)
-            serializer = CallPartSerializer(item)
-        elif ext:
-            item = CallPart.objects.filter(extension=ext)
-            serializer = CallPartSerializer(item, many=True)
-        elif ext_id:
-            item = CallPart.objects.filter(extension_uuid=ext_id)
-            serializer = CallPartSerializer(item, many=True)
-        else:
-            item = CallPart.objects  
-            serializer = CallPartSerializer(item, many=True)  
+        serializer = util_get_call_part_view(request) 
         return Response(serializer.data)
 
     def post(self, request):
@@ -139,21 +129,7 @@ class CallPartView(APIView):
 
 class FullCallDataView(APIView):
     def get(self, request):
-        pk = request.query_params.get('pk')
-        cdr = request.query_params.get('cdr_id')
-        calllog = request.query_params.get('calllog_id')
-        if pk:
-            item = FullCallData.objects.get(pk=pk)
-            serializer = FullCallDataSerializer(item) 
-        elif cdr:
-            item = FullCallData.objects.get(cdr_uuid=cdr)
-            serializer = FullCallDataSerializer(item)
-        elif calllog:
-            item = FullCallData.objects.get(calllog_uuid=calllog)
-            serializer = FullCallDataSerializer(item)
-        else:
-            item = FullCallData.objects.all() 
-            serializer = FullCallDataSerializer(item, many=True)  
+        serializer = util_get_full_calldata__view(request) 
         return Response(serializer.data)
 
     def post(self, request):
