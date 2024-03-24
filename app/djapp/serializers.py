@@ -8,7 +8,8 @@ class ConversationItemSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'speaker': {'required': False},
             'callpart_id': {'required': False},
-            'timestamp': {'required': False}
+            'timestamp': {'required': False},
+            # 'id': {'editable': False}
         }
 
 class CallPartSerializer(serializers.ModelSerializer):

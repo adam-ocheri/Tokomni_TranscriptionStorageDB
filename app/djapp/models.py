@@ -13,11 +13,14 @@ class FullCallData(models.Model):
 
 
 class CallPart(models.Model):
+    id = models.CharField(primary_key=True, editable=False, auto_created=False)
     fullcall_id = models.ForeignKey(FullCallData, on_delete=models.CASCADE)
     callpart_uuid = models.CharField(max_length=200, default="") # editable=False
     file_location = models.TextField()
     extension = models.IntegerField(default=0)
     extension_uuid = models.CharField(max_length=200, default="") # editable=False
+    status = models.IntegerField(default=0)
+    engine_version = models.CharField(max_length=200, default="")
 
 
 class ConversationItem(models.Model):
@@ -31,3 +34,5 @@ class ConversationItem(models.Model):
         indexes = [
             GinIndex(fields=['search_vector'])
         ]
+
+# האם הקולפארטס באים עם אפוק לכל אחד מהם?
