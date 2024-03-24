@@ -6,21 +6,23 @@ from django.contrib.postgres.search import SearchVectorField
 # Create your models here.
 
 class FullCallData(models.Model):
+    id = models.UUIDField(primary_key=True, editable=True, auto_created=False)
     cdr_uuid = models.CharField(max_length=200) # editable=False
-    calllog_uuid = models.CharField(max_length=200, default="") # editable=False
+    # calllog_uuid = models.CharField(max_length=200, default="") # editable=False
     domain = models.TextField(default="")
     epoch = models.BigIntegerField(default=0)
 
 
 class CallPart(models.Model):
-    id = models.CharField(primary_key=True, editable=False, auto_created=False)
+    id = models.UUIDField(primary_key=True, editable=True, auto_created=False)
     fullcall_id = models.ForeignKey(FullCallData, on_delete=models.CASCADE)
-    callpart_uuid = models.CharField(max_length=200, default="") # editable=False
+    # callpart_uuid = models.CharField(max_length=200, default="") # editable=False
     file_location = models.TextField()
     extension = models.IntegerField(default=0)
     extension_uuid = models.CharField(max_length=200, default="") # editable=False
     status = models.IntegerField(default=0)
     engine_version = models.CharField(max_length=200, default="")
+    user_id = models.UUIDField(editable=True, auto_created=False)
 
 
 class ConversationItem(models.Model):
@@ -34,5 +36,3 @@ class ConversationItem(models.Model):
         indexes = [
             GinIndex(fields=['search_vector'])
         ]
-
-# האם הקולפארטס באים עם אפוק לכל אחד מהם?
