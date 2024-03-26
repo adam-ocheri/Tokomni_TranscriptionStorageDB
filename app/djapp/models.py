@@ -1,5 +1,4 @@
 from django.db import models
-import uuid
 from django.contrib.postgres.indexes import GinIndex
 from django.contrib.postgres.search import SearchVectorField
 
@@ -8,7 +7,6 @@ from django.contrib.postgres.search import SearchVectorField
 class FullCallData(models.Model):
     id = models.UUIDField(primary_key=True, editable=True, auto_created=False)
     cdr_uuid = models.CharField(max_length=200) # editable=False
-    # calllog_uuid = models.CharField(max_length=200, default="") # editable=False
     domain = models.TextField(default="")
     epoch = models.BigIntegerField(default=0)
 
@@ -16,7 +14,6 @@ class FullCallData(models.Model):
 class CallPart(models.Model):
     id = models.UUIDField(primary_key=True, editable=True, auto_created=False)
     fullcall_id = models.ForeignKey(FullCallData, on_delete=models.CASCADE)
-    # callpart_uuid = models.CharField(max_length=200, default="") # editable=False
     file_location = models.TextField()
     extension = models.IntegerField(default=0)
     extension_uuid = models.CharField(max_length=200, default="") # editable=False

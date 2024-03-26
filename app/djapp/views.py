@@ -2,11 +2,13 @@ from django.shortcuts import render
 from django.db import connection
 from django.db.models import Q
 from .models import CallPart, ConversationItem, FullCallData
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import api_view
 from .serializers import ConversationItemSerializer, CallPartSerializer, FullCallDataSerializer
 from .views_utils import util_get_conversation_item_view, util_get_call_part_view, util_get_full_calldata__view
+import uuid
 
 def home(request):
     return render(request, "home.html")
@@ -54,7 +56,88 @@ def search(request):
     # context = {'items': conversation, 'calls': calls, 'callparts': callparts}
     return render(request, 'main/index.html', context)
 
-# Create your views here.
+@api_view(['POST'])
+def store_new_transcription_job(request):
+    data = request.data
+    print("GOT DATA AFTER TRANSCRIPTION: ", data)
+    # Deserialize FullCallData
+    fullcall_serializer = FullCallDataSerializer(data=data.get("fullcalldata"))
+    if fullcall_serializer.is_valid():
+        fullcall_instance = fullcall_serializer.save()
+    else:
+        return Response(fullcall_serializer.errors, status=400)
+
+    # Deserialize CallPart objects
+    callpart_data = data.get("callpart")
+    print("Printing Callpart: ", callpart_data)
+    callpart_data["fullcall_id"] = str(fullcall_instance.id)  # Set the foreign key
+    callpart_serializer = CallPartSerializer(data=callpart_data)
+    if callpart_serializer.is_valid():
+        callpart_instance = callpart_serializer.save()
+    else:
+        # Rollback the created FullCallData instance if any error occurs
+        fullcall_instance.delete()
+        return Response(callpart_serializer.errors, status=400)
+
+    # Deserialize ConversationItem objects
+    conversation_items_data = data.get("conversation_items", [])
+    for conversation_item_data in conversation_items_data:
+        conversation_item_data["callpart_id"] = str(callpart_instance.id)  # Set the foreign key
+        conversation_item_serializer = ConversationItemSerializer(data=conversation_item_data)
+        if conversation_item_serializer.is_valid():
+            conversation_item_serializer.save()
+        else:
+            # Rollback the created FullCallData and CallPart instances if any error occurs
+            fullcall_instance.delete()
+            callpart_instance.delete()
+            return Response(conversation_item_serializer.errors, status=400)
+
+    return Response("Finished Job", status=201)
+
+@api_view(['GET'])
+def get_callparts_by_fullcall_id(request):
+    query = request.GET.get('fullcall_id')
+    callparts = CallPart.objects.filter(fullcall_id=query)
+    result = []
+
+    for callpart in callparts:
+        # callparts = CallPart.objects.filter(fullcall_id=query)
+        # callpart_data["fullcall_id"] = str(fullcall_instance.id)  # Set the foreign key
+        conversation_items = ConversationItem.objects.filter(callpart_id=callpart.id)
+        serializer = ConversationItemSerializer(conversation_items, many=True)
+        result.append(serializer.data)
+    
+    return Response(result, status=200)
+    # conversation_items = ConversationItem.objects.none()
+
+    # if query:
+        # Filter CallParts based on the selected FullCallData
+        # callparts = CallPart.objects.filter(fullcall_id=selected_call_id)
+        # For each CallPart, fetch its related ConversationItems
+        # conversation_items = ConversationItem.objects.filter(callpart_id__in=selected_callpart_id)
+
+
+@api_view(['GET'])
+def get_conversation_items_by_callpart(request):
+    print("GET ConversationItems via CallPart_ID...")
+    print(request)
+    query = request.GET.get('callpart_id')
+    print("QUERY: ", query)
+
+    if query:
+        try:
+            callpart_id = uuid.UUID(query)  # Convert the string to a UUID object
+        except ValueError:
+            return Response({'error': 'Invalid UUID format'}, status=400)
+        
+        conversation_items = ConversationItem.objects.filter(callpart_id=callpart_id)
+        serializer = ConversationItemSerializer(conversation_items, many=True)
+        return Response(serializer.data, status=200)
+    else:
+        return Response("Missing query parameter \'callpart_id\' in request url", status=400)
+    
+
+# View Classes
 class ConversationItemView(APIView):
     def get(self, request):
         serializer = util_get_conversation_item_view(request)
@@ -76,9 +159,8 @@ class ConversationItemView(APIView):
         serializer = ConversationItemSerializer(item, data=request.data)
         if serializer.is_valid():
             validated_data = serializer.validated_data
-            # Exclude 'speaker' and 'call_part' from being updated
-            validated_data.pop('speaker', None)
-            validated_data.pop('callpart_id', None)
+            validated_data.pop('speaker', None) # Exclude 'speaker' from being updated
+            validated_data.pop('callpart_id', None) # Exclude 'call_part' from being updated
             serializer.save(**validated_data)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
