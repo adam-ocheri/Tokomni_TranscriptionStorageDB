@@ -29,9 +29,10 @@ def search(request):
 
     if selected_call_id:
         # Filter CallParts based on the selected FullCallData
-        callparts = CallPart.objects.filter(fullcall_id=selected_call_id)
+        callparts = CallPart.objects.filter(fullcall_id=uuid.UUID(selected_call_id))
         # For each CallPart, fetch its related ConversationItems
-        conversation_items = ConversationItem.objects.filter(callpart_id__in=selected_callpart_id)
+    if selected_callpart_id:
+        conversation_items = ConversationItem.objects.filter(callpart_id=uuid.UUID(selected_callpart_id))
         
 
     if query:
@@ -55,6 +56,86 @@ def search(request):
         print("--------------------")
     # context = {'items': conversation, 'calls': calls, 'callparts': callparts}
     return render(request, 'main/index.html', context)
+
+@api_view(['GET'])
+def get_callparts_by_fullcall_id(request):
+    query = request.GET.get('fullcall_id')
+    domain = request.GET.get('domain')
+    engine_version = request.GET.get('engine_version')
+    extension = request.GET.get('extension')
+    callparts = FullCallData.objects.none()
+
+    if domain:
+        fullcalls = FullCallData.objects.filter(domain__search=domain)
+        domain_fullcall_ids = fullcalls.values_list('id', flat=True)
+        callparts = CallPart.objects.filter(fullcall_id__in=domain_fullcall_ids)
+
+    # if not engine_version and query:
+    #     q = Q(fullcall_id=query)
+    # elif engine_version:
+    #     q = (Q(engine_version__search=engine_version))
+    # elif query and engine_version:
+    #     q = (Q(fullcall_id__search=query) | Q(engine_version__search=engine_version))
+    # else:
+    #     q = Q()
+    
+    q = Q()
+    if query:
+        q &= Q(fullcall_id=query)
+    if engine_version:
+        q &= (Q(engine_version__search=engine_version))
+
+    # append queries to the QuerySet using &=
+    if extension:
+        q &= (Q(extension=int(extension)))
+    
+    if domain:
+        callparts = callparts.filter(q)
+    else:
+        callparts = CallPart.objects.filter(q)
+
+    result = []
+
+    for callpart in callparts:
+        conversation_items = ConversationItem.objects.filter(callpart_id=callpart.id)
+        serializer = ConversationItemSerializer(conversation_items, many=True)
+        result.append(serializer.data)
+    
+    return Response(result, status=200)
+
+@api_view(['GET'])
+def get_conversation_items_by_callpart(request):
+    print("GET ConversationItems via CallPart_ID...")
+    print(request)
+    query = request.GET.get('callpart_id')
+    search_vector = request.GET.get('search_vector')
+    speaker = request.GET.get('speaker')
+    print("QUERY: ", query)
+
+    if query:
+        try:
+            callpart_id = uuid.UUID(query)  # Convert the string to a UUID object
+        except ValueError:
+            return Response({'error': 'Invalid UUID format'}, status=400)
+        
+        if query and not search_vector:
+            q = Q(callpart_id=callpart_id)
+        elif query and search_vector and not speaker:
+            q = (Q(callpart_id=callpart_id) | Q(search_vector__search=search_vector))
+        elif query and search_vector and not speaker:
+            q = (Q(callpart_id=callpart_id) | Q(search_vector__search=search_vector))
+        elif query and search_vector and speaker:
+            q = (Q(callpart_id=callpart_id) 
+                | Q(speaker__search=speaker) 
+                | Q(search_vector__search=search_vector)
+                )
+        
+        conversation_items = ConversationItem.objects.filter(q)
+        serializer = ConversationItemSerializer(conversation_items, many=True)
+        return Response(serializer.data, status=200)
+    else:
+        return Response("Missing query parameter \'callpart_id\' in request url", status=400)
+    
 
 @api_view(['POST'])
 def store_new_transcription_job(request):
@@ -93,49 +174,6 @@ def store_new_transcription_job(request):
             return Response(conversation_item_serializer.errors, status=400)
 
     return Response("Finished Job", status=201)
-
-@api_view(['GET'])
-def get_callparts_by_fullcall_id(request):
-    query = request.GET.get('fullcall_id')
-    callparts = CallPart.objects.filter(fullcall_id=query)
-    result = []
-
-    for callpart in callparts:
-        # callparts = CallPart.objects.filter(fullcall_id=query)
-        # callpart_data["fullcall_id"] = str(fullcall_instance.id)  # Set the foreign key
-        conversation_items = ConversationItem.objects.filter(callpart_id=callpart.id)
-        serializer = ConversationItemSerializer(conversation_items, many=True)
-        result.append(serializer.data)
-    
-    return Response(result, status=200)
-    # conversation_items = ConversationItem.objects.none()
-
-    # if query:
-        # Filter CallParts based on the selected FullCallData
-        # callparts = CallPart.objects.filter(fullcall_id=selected_call_id)
-        # For each CallPart, fetch its related ConversationItems
-        # conversation_items = ConversationItem.objects.filter(callpart_id__in=selected_callpart_id)
-
-
-@api_view(['GET'])
-def get_conversation_items_by_callpart(request):
-    print("GET ConversationItems via CallPart_ID...")
-    print(request)
-    query = request.GET.get('callpart_id')
-    print("QUERY: ", query)
-
-    if query:
-        try:
-            callpart_id = uuid.UUID(query)  # Convert the string to a UUID object
-        except ValueError:
-            return Response({'error': 'Invalid UUID format'}, status=400)
-        
-        conversation_items = ConversationItem.objects.filter(callpart_id=callpart_id)
-        serializer = ConversationItemSerializer(conversation_items, many=True)
-        return Response(serializer.data, status=200)
-    else:
-        return Response("Missing query parameter \'callpart_id\' in request url", status=400)
-    
 
 # View Classes
 class ConversationItemView(APIView):

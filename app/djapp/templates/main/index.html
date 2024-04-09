@@ -9,7 +9,7 @@
     <select name="selected_call_id">
         <option value="">Select a FullCallData</option>
         {% for call in calls %}
-        <option value="{{ call.id }}">{{ call.cdr_uuid }}</option>
+        <option value="{{ call.id }}">{{ call.id }}</option>
         {% endfor %}
     </select>
     <select name="selected_callpart_id">
